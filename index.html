@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Julia’s leesavontuur</title>
+  <style>
+    :root {
+      --accent-1: #f8b3d0;
+      --accent-2: #c59cf2;
+      --accent-3: #a0e8d9;
+      --card: #fff6fb;
+      --pac: #fdd835;
+    }
+
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: auto;
+    }
+
+    .controls .row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #ddd;
+      box-shadow: 0 4px 0 #aaa;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(1px); box-shadow: 0 3px 0 #c25ba1; }
+    .mint { background: var(--accent-3); box-shadow: 0 4px 0 #7fdac9; }
+    .lila { background: var(--accent-2); box-shadow: 0 4px 0 #b28ae6; }
+    .roze { background: var(--accent-1); box-shadow: 0 4px 0 #e89bbd; }
+
+    .story-wrap {
+      position: relative;
+      background: var(--card);
+      border: 3px solid var(--accent-2);
+      border-radius: 16px;
+      padding: 18px;
+      min-height: 240px;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .story {
+      font-size: clamp(22px, 4vw, 30px);
+      line-height: 1.6;
+      letter-spacing: 0.2px;
+      user-select: none;
+      white-space: pre-wrap;
+      word-break: normal;
+      hyphens: none;
+      position: relative;
+      z-index: 1;
+      color: #6b4c9a;
+    }
+
+    .char {
+      display: inline;
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .char.eaten {
+      opacity: 0.18;
+      transform: scale(0.9);
+    }
+
+    .pacman {
+      position: absolute;
+      width: 28px;
+      height: 24px;
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .pac-body {
+      position: absolute;
+      inset: 0;
+      background: var(--pac);
+      border-radius: 50% / 40%;
+      box-shadow: inset -4px -4px 0 rgba(0,0,0,0.06);
+    }
+
+    .pac-mouth {
+      position: absolute;
+      width: 36%;
+      height: 36%;
+      right: 0;
+      top: 50%;
+      transform-origin: left center;
+      transform: translateY(-50%) rotate(0deg);
+      background: red;
+      clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+      animation: chomp 280ms infinite ease-in-out;
+    }
+
+    .pac-eye {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: black;
+      border-radius: 50%;
+      top: 25%;
+      left: 55%;
+      z-index: 1;
+    }
+
+    @keyframes chomp {
+      0%   { transform: translateY(-50%) rotate(0deg); }
+      50%  { transform: translateY(-50%) rotate(28deg); }
+      100% { transform: translateY(-50%) rotate(0deg); }
+    }
+
+    .info {
+      margin-top: 8px;
+      font-size: 0.95rem;
+      opacity: 0.8;
+    }
+
+    .celebrate::after {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.6rem;
+      color: #d94da5;
+      animation: pop 1s ease-in-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+
+    @keyframes fall {
+      to { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes starburst {
+      from { transform: translate(0,0) scale(1); opacity: 1; }
+      to {
+         transform: translate(var(--dx), var(--dy)) scale(0.5);
+         opacity: 0;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Julia’s leesavontuur</h1>
+    <p class="lead">Kies een verhaaltje, druk op Start en kijk hoe Pac‑Man de letters opeet. Met de schuiver stel je de snelheid in.</p>
+
+    <div class="controls">
+      <div class="row">
+        <button id="story1Btn" class="mint">🧪 De geheime regenboogcode</button>
+        <button id="story2Btn" class="lila">🦉 Yara en de dierentaal</button>
+        <button id="story3Btn" class="roze">🚲 Fay vliegt!</button>
+        <button id="story4Btn" class="mint">🌟 Sterrenmissie</button>
+        <button id="story5Btn" class="lila">🐱 Kattenkracht</button>
+        <button id="story6Btn" class="roze">💎 De glimlachschat</button>
+        <button id="story7Btn"  class="mint">🔔 Muziekschat</button>
+        <button id="story8Btn"  class="lila">🐉 Drakenredding</button>
+        <button id="story9Btn"  class="roze">🐚 Schelpengefluister</button>
+        <button id="story10Btn" class="mint">🦄 Eenhoornengel</button>
+        <button id="story11Btn" class="lila">💡 Tunnel vol Licht</button>
+        <button id="story12Btn" class="roze">🏰 Kasteel van Dromen</button>
+      </div>
+      <div class="row" style="align-items:flex-end; width:100%;">
+        <div style="flex:1 1 300px;">
+          <label for="speed">Snelheid: <span id="speedLabel">1</span> letter(s)/sec</label>
+          <input id="speed" type="range" min="1" max="50" value="1" step="1" />
+        </div>
+        <div class="row">
+          <button id="startBtn" class="roze">Start</button>
+          <button id="pauseBtn" class="lila">Pauze</button>
+          <button id="resetBtn" class="mint">Opnieuw</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="story-wrap" id="storyWrap" aria-live="polite">
+      <div class="pacman" id="pacman" aria-hidden="true">
+        <div class="pac-body"></div>
+        <div class="pac-eye"></div>
+        <div class="pac-mouth"></div>
+      </div>
+      <div class="story" id="story"></div>
+      <div class="info" id="info">Status: klaar om te starten.</div>
+    </div>
+  </div>
+  <script>
+  // Helper: trim elke regel, verwijder lege regels en plak alles aan elkaar met één spatie
+  const clean = s => s
+    .split('\n')                  // opbreken in regels
+    .map(line => line.trim())     // per regel trims
+    .filter(line => line)         // lege regels eruit
+    .join(' ');                   // weer aanéén met spatie
+
+  const stories = {
+    1: clean(`Luna zat in haar geheime clubhuis en keek naar haar laptop.
+      Plots verscheen er een mysterieus bericht: “Activeer de regenboogcode om de wereld te redden.”
+      Ze riep haar beste vriendin Noor erbij.
+      Samen kraakten ze puzzels, sprongen over laserstralen en vonden de magische kleurencombinatie.
+      Toen ze de code invoerden, verscheen een regenboog boven de stad.
+      Iedereen begon te lachen.
+      Luna fluisterde: “Supermeiden lossen alles op.”`),
+
+    2: clean(`
+      Yara had een ketting gekregen van haar oma. “Deze is speciaal,” zei oma.
+      Toen Yara hem omdeed, hoorde ze ineens een stem: “Hoi!” Het was een eekhoorn.
+      Ze ontdekte dat ze met dieren kon praten.
+      Een konijn vroeg hulp om zijn hol terug te vinden.
+      Yara volgde de sporen, hielp de dieren en kreeg een pluim van de uil.
+      “Jij bent een echte Supermeid,” zei hij trots.
+    `),
+
+    3: clean(`
+      Fay had haar fiets gepimpt met glitterbanden en een roze bel.
+      Maar toen ze erop sprong, gebeurde er iets geks: hij vloog!
+      Ze scheerde over de school, door het park en zelfs langs de wolken.
+      Onderweg zag ze een meisje dat haar knuffel kwijt was.
+      Fay dook naar beneden, vond de knuffel in een boom en bracht hem terug.
+      “Dank je!” riep het meisje.
+      Fay glimlachte. “Supermeiden helpen altijd.”
+    `),
+
+    4: clean(`
+      Nova keek naar de sterren en droomde van een missie in de ruimte.
+      Ze bouwde een raket van karton en fantasie.
+      Toen ze instapte, begon alles te trillen.
+      Ze vloog langs planeten, sprak met een maanwezen en bracht een verloren ster terug naar zijn familie.
+      “Je hebt de sterren gered,” zei het wezen.
+      Nova straalde. “Supermeiden gaan tot de maan en terug.”
+    `),
+
+    5: clean(`
+      Mila hoorde een vreemd geluid in de tuin.
+      Ze vond een kat met een gouden halsband. “Ik ben prins Poes,” zei hij.
+      Samen gingen ze op zoek naar zijn paleis.
+      Ze sprongen over heggen, kropen door tunnels en vonden een geheime poort.
+      Daar wachtte een kattenkoningin. “Dank je Mila,” zei ze. “Jij hebt kattenkracht!”
+    `),
+
+    6: clean(`
+      Zoë vond een oude kaart in een boek. “De glimlachschat ligt onder de grote eik,” stond erop.
+      Ze volgde de aanwijzingen, groef voorzichtig en vond een doos vol briefjes.
+      Op elk stond een compliment: “Je bent slim!” “Je bent dapper!” “Je bent lief!”
+      Zoë deelde ze uit op school. Iedereen glimlachte.
+      “De echte schat ben jij,” zei de juf.
+    `),
+
+    7: clean(`
+      Fenna vond een glinsterende knikker in de zachte, warme zandbak terwijl de zon op haar gezicht danste.
+      Toen ze hem oppakte, begon de speeltuin plots te zingen alsof een onzichtbaar orkest de middag bespeelde.
+      Samen met Lana volgde ze de vrolijke melodie langs pratende bomen en zingende bloemen.
+      Ze ontdekten een verborgen tunnel onder de glijbaan, waar fonkelende lichtjes dansten als vuurvliegjes.
+      In het hart van de tunnel lag een oude schatkist vol glimlachen en kleurrijke linten.
+      Fenna voelde een golf van vreugde en zei luid: “Supermeiden brengen altijd muziek en licht in de wereld,” waarna de zandbak weer verstomde.
+    `),
+
+    8: clean(`
+      Sara en Noor bouwden met versleten planken een hut in de achtertuin, compleet met stekelige doornstruiken als natuurlijke muur.
+      Binnen vonden ze een prachtig versierd kaartspel met draken, kastelen en mysterieuze toversymbolen.
+      Zodra Sara de eerste kaart omdraaide, sprongen de figuurtjes tot leven: een klein draakje met glinsterende schubben keek hen angstig aan en fluisterde om hulp.
+      De supermeiden volgden hem over steile rotsen en glibberige wortels tot ze bij een donkere grot kwamen waar het ei trilde.
+      Voorzichtig droegen ze het ei terug via een touwbrug, terwijl het draakje sterrentjes spuwde in dankbaarheid.
+      Noor glimlachte: “Supermeiden lossen altijd ieder draakjesraadsel op.”
+    `),
+
+    9: clean(`
+      Jasmijn liep op blote voeten over het glinsterende strand en ontdekte een grote schelp die zacht fluisterde bij elke zilte bries.
+      Nieuwsgierig hield ze de schelp tegen haar oor en hoorde zeehonden zingen in de branding.
+      Aan de waterkant vond ze een klein zeemeerminkalfje, diep bedroefd omdat het zijn moeder kwijt was.
+      Jasmijn knielde, streelde zijn natte rug en beloofde te helpen.
+      Samen doorzochten ze schelpen, krabben en mossels en volgden een spoor van glinsterend koraalzand naar een kelpbos.
+      Daar vond ze de moeder, die opgelucht knikte. De zee fluisterde: “Dank je, dappere Supermeid,” terwijl moeder en kalfje samen in de branding dansten.
+    `),
+
+    10: clean(`
+      Mila ontdekte diep in het bos een eenhoorn wiens glinsterende hoorn gebroken was tijdens een storm.
+      Het dier snikte zachtjes omdat het niet kon galopperen zonder pijn.
+      Zonder aarzelen verzamelde Mila zachte mospluizen, kleurrijke wilde bloemen en flexibele wilgentakken.
+      Ze vlechtte een stevig verband om de hoorn en neuriede een kalmerend liedje.
+      Langzaam groeide vertrouwen en wiebelde de eenhoorn voorzichtig met zijn hoofd.
+      Toen het verband stevig zat, sprong hij met een vreugdekreet op haar rug en galoppeerde tussen de bomen door, waarbij zonnestralen dansten.
+      Hij hinnikte luid: “Jij bent mijn reddende Supermeid,” waarna hij een pad van bloeiende bloemen voor haar streed.
+    `),
+
+    11: clean(`
+      Emma en Luna ontdekten na de pauze een geheime tunnel onder het schoolplein, verborgen onder losse plavuizen.
+      Nieuwsgierig kropen ze naar binnen en zagen muurtekeningen van betoverde kastelen, dansende wezens en fonkelende sterren.
+      Halverwege klonk een hese stem: “Help ons de duisternis verdrijven.”
+      Zonder te twijfelen pakten de supermeiden hun zaklampen en regenboogkrijtjes.
+      Ze tekenden zonnetjes, regenbogen en glimlachende monsters op de wanden, en langzaam week de schaduw.
+      De wezens kwamen tevoorschijn en juichten: “Jullie brengen licht en vreugde!”
+      Emma riep: “Supermeiden stralen overal.”
+    `),
+
+    12: clean(`
+      Zoë en Aïsha keken omhoog en ontdekten hoog in de lucht een majestueus kasteel opgebouwd uit zachte, witte wolken.
+      Vastbesloten beklommen ze een glanzende regenboogtrap die kaarsrecht de blauwe hemel in boog.
+      Boven wachtte de wolkenkoningin in een sluier van dauwdruppels, die hen een gouden sleutel gaf om dromen te openen.
+      Samen bliezen ze zachte slaapwolken uit over slaperige dorpjes beneden. De wolken vormden troostende patronen boven de huizen en kinderen glimlachten in hun dromen.
+      De koningin boog diep en zei: “Jullie zijn ware Supermeiden, beschermeressen van dromen en licht.” Zo zweefden ze terug naar huis, hand in hand en hart vol magie.
+    `)
+  };
+
+const celebrationTexts = {
+  1: "🌈 Regenboog geactiveerd! Superkracht ontgrendeld!",
+  2: "🦉 Jij spreekt dierentaal! Wat een gave!",
+  3: "🚲 Vliegende fiets? Jij bent sneller dan de wind!",
+  4: "🌟 Ster gered! Jij bent een ruimtereiziger!",
+  5: "🐱 Prins Poes is veilig dankzij jou!",
+  6: "💌 Complimenten verspreid! Jij bent de echte schat!",
+  7: "🔔 Muziekgeheim onthuld! Jij bent een melodie-supermeid!",
+  8: "🐉 Draakhulp geslaagd! Jij bent een drakenridder!",
+  9: "🌊 Zeemeerminvriendin! Jij bent een waterheldin!",
+  10: "🦄 Hoorn hersteld! Jij bent een eenhoornengel!",
+  11: "🗺️ Tunnel verlicht! Jij bent een lichtbrenger!",
+  12: "☁️ Droomkasteel geopend! Jij bent een wolkenridder!"
+};
+
+    const storyEl = document.getElementById('story');
+    const pacmanEl = document.getElementById('pacman');
+    const wrapEl = document.getElementById('storyWrap');
+    const infoEl = document.getElementById('info');
+
+    const speedSlider = document.getElementById('speed');
+    const speedLabel = document.getElementById('speedLabel');
+
+    const storyButtons = [
+      document.getElementById('story1Btn'),
+      document.getElementById('story2Btn'),
+      document.getElementById('story3Btn'),
+      document.getElementById('story4Btn'),
+      document.getElementById('story5Btn'),
+      document.getElementById('story6Btn'),
+      document.getElementById('story7Btn'),
+      document.getElementById('story8Btn'),
+      document.getElementById('story9Btn'),
+      document.getElementById('story10Btn'),
+      document.getElementById('story11Btn'),
+      document.getElementById('story12Btn')
+    ];
+
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let chars = [];
+    let nextIndex = 0;
+    let running = false;
+    let timerId = null;
+    let speed = parseInt(speedSlider.value, 10);
+    let currentStory = 1;
+
+    function updateInfo(text) {
+      infoEl.textContent = text;
+    }
+
+    function loadStory(nr) {
+      stop();
+      storyEl.innerHTML = '';
+      wrapEl.classList.remove('celebrate');
+      wrapEl.querySelector('.celebrate')?.remove();
+      chars = [];
+      nextIndex = 0;
+      currentStory = nr;
+
+      const text = stories[nr];
+      const frag = document.createDocumentFragment();
+      for (const ch of text) {
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.textContent = ch;
+        frag.appendChild(span);
+        chars.push(span);
+      }
+      storyEl.appendChild(frag);
+
+      requestAnimationFrame(() => {
+        placePacmanAt(nextIndex, true);
+        updateInfo(`Verhaal ${nr} geladen. Druk op Start.`);
+      });
+    }
+
+    function getCharPos(idx) {
+      if (idx < 0 || idx >= chars.length) return null;
+      const el = chars[idx];
+      const parentRect = storyEl.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
+      const x = rect.left - parentRect.left - 12;
+      const y = rect.top - parentRect.top + rect.height / 2 - 4;
+      return { x, y, el };
+    }
+
+    function placePacmanAt(idx, instant = false) {
+      let target = null;
+      const fallbackIndex = Math.max(0, idx);
+
+      for (let i = fallbackIndex; i < chars.length; i++) {
+        const pos = getCharPos(i);
+        if (pos && !chars[i].classList.contains('eaten')) {
+          target = pos;
+          break;
+        }
+      }
+
+      if (!target) return false;
+      pacmanEl.style.transition = instant ? 'none' : 'transform 180ms ease';
+      pacmanEl.style.transform = `translate(${target.x}px, ${target.y}px)`;
+      return true;
+    }
+    function eatNext() {
+      while (nextIndex < chars.length && chars[nextIndex].classList.contains('eaten')) {
+        nextIndex++;
+      }
+      if (nextIndex >= chars.length) {
+        stop();
+        updateInfo('Hoera! Alle lettertjes zijn opgegeten. 🎉');
+        wrapEl.classList.add('celebrate');
+        wrapEl.querySelector('.celebrate')?.remove();
+        const surprise = document.createElement('div');
+        surprise.className = 'celebrate';
+        surprise.style.position = 'absolute';
+        surprise.style.top = '10px';
+        surprise.style.left = '50%';
+        surprise.style.transform = 'translateX(-50%)';
+        surprise.style.fontSize = '1.6rem';
+        surprise.style.color = '#d94da5';
+        surprise.style.animation = 'pop 1s ease-in-out';
+        surprise.textContent = celebrationTexts[currentStory] || "🎉 Goed gedaan!";
+        wrapEl.appendChild(surprise);
+        // Beloning afhankelijk van snelheid
+        if (speed <= 3) {
+           launchStars();
+        } else if (speed <= 7) {
+           pacmanDance();
+        } else {
+          launchConfetti();
+        }
+        return;
+      }
+
+      placePacmanAt(nextIndex, false);
+
+      const pos = getCharPos(nextIndex);
+      if (!pos) {
+        nextIndex++;
+        scheduleNext();
+        return;
+      }
+
+      setTimeout(() => {
+        pos.el.classList.add('eaten');
+        nextIndex++;
+        scheduleNext();
+      }, 180);
+    }
+
+    function scheduleNext() {
+      clearTimeout(timerId);
+      if (!running) return;
+      const interval = Math.max(60, Math.floor(1000 / speed));
+      timerId = setTimeout(eatNext, interval);
+    }
+
+    function start() {
+      if (!running) {
+        running = true;
+        updateInfo(`Bezig… snelheid: ${speed} letter(s)/sec.`);
+        scheduleNext();
+      }
+    }
+
+    function stop() {
+      running = false;
+      clearTimeout(timerId);
+    }
+
+    function pause() {
+      stop();
+      updateInfo('Gepauzeerd.');
+    }
+
+    function reset() {
+      stop();
+      chars.forEach(el => el.classList.remove('eaten'));
+      nextIndex = 0;
+      placePacmanAt(nextIndex, true);
+      wrapEl.classList.remove('celebrate');
+      wrapEl.querySelector('.celebrate')?.remove();
+      updateInfo('Status: klaar om te starten.');
+    }
+
+    window.onload = () => {
+      storyButtons.forEach((btn, i) => {
+        btn.addEventListener('click', () => loadStory(i + 1));
+      });
+
+      startBtn.addEventListener('click', start);
+      pauseBtn.addEventListener('click', pause);
+      resetBtn.addEventListener('click', reset);
+
+      speedSlider.addEventListener('input', (e) => {
+        speed = parseInt(e.target.value, 10);
+        speedLabel.textContent = speed;
+        if (running) {
+          updateInfo(`Bezig… snelheid: ${speed} letter(s)/sec.`);
+          scheduleNext();
+        }
+      });
+
+      loadStory(1);
+      window.addEventListener('resize', () => placePacmanAt(nextIndex, true));
+    };
+
+function launchStars() {
+  for (let i = 0; i < 20; i++) {
+    const star = document.createElement('div');
+    star.textContent = '✨';
+    star.style.position = 'absolute';
+    star.style.left = (wrapEl.offsetLeft + wrapEl.offsetWidth/2) + 'px';
+    star.style.top = (wrapEl.offsetTop + wrapEl.offsetHeight/2) + 'px';
+    star.style.fontSize = (20 + Math.random()*20) + 'px'; // variatie in grootte
+    star.style.animation = `starburst ${3 + Math.random()*2}s ease-out forwards`;
+    star.style.setProperty('--dx', (Math.random()*300-150) + 'px');
+    star.style.setProperty('--dy', (Math.random()*300-150) + 'px');
+    document.body.appendChild(star);
+    setTimeout(() => star.remove(), 5000); // cleanup na 5s
+  }
+}
+
+function pacmanDance() {
+  pacmanEl.style.transition = 'transform 0.8s ease, filter 0.8s ease';
+  pacmanEl.style.transform += ' scale(1.6) rotate(720deg)';
+  pacmanEl.style.filter = 'hue-rotate(180deg)'; // kleurtje erbij
+
+  setTimeout(() => {
+    pacmanEl.style.transform = pacmanEl.style.transform.replace(/scale.*|rotate.*$/, '');
+    pacmanEl.style.filter = 'none';
+  }, 1000);
+}
+
+function launchConfetti() {
+  for (let i = 0; i < 40; i++) {
+    const conf = document.createElement('div');
+    conf.textContent = '🎊';
+    conf.style.position = 'absolute';
+    conf.style.left = Math.random() * window.innerWidth + 'px';
+    conf.style.top = '-40px';
+    conf.style.fontSize = '24px';
+    conf.style.animation = `fall ${2 + Math.random()*2}s linear forwards`;
+    document.body.appendChild(conf);
+    setTimeout(() => conf.remove(), 8000);
+  }
+}
+
+  </script>
+</body>
+</html>
